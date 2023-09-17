@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Word Checker
+{% endblock %}
+
+{% block main %}
+    <h2>SCRABBLE WORD CHECKER</h2>
+
+    <p>So you think you're slick huh? Trying out random words... pathetic.</p><br>
+
+    <form action="/checker" method="post">
+        <input class="wordcheck" type="text" name="word" autofocus autocomplete="off" placeholder="Enter word">
+        <input class="bttn" type="submit" id="check" value="Check word">
+    </form>
+    
+    
+    {% if msg %}
+        <div class="responsebox">
+        
+            {% if 'Yes' == msg %}
+            <h5>Congrats sucker! {{ word }} is a valid word.</h5>
+            <form action="http://www.google.com/search" method="get" target="_blank">
+                <input type="hidden" value="{{ word }} definition" name="q"/>
+                <input class="bttn" type="submit" value="Get meaning" style="background-color: #04434F;"/>
+            </form>
+            {% elif 'No' == msg %}
+                <h5>Boohoo. {{ word }} is not a valid word. You tried.</h5>
+            {% else %} 
+                <h5>Please enter a word.</h5>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 4rem;">
+        <h2 style="font-family: 'Oswald', sans-serif;">2 LETTER SCRABBLE WORDS</h2>
+        <p>For those desperate moments...</p>
+    
+        <img src="static/2letter.jpeg" style="width: 500px;">
+    </div>
+
+{% endblock %}

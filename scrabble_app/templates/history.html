@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Game History
+{% endblock %}
+
+
+
+{% block main %}
+<h2>SCRABBLE GAME HISTORY</h2>
+
+<p>Keep track of all your scores, wins, and more with our Scrabble Game History table! Bragging rights included.</p><br>
+
+<div id="loginrequired">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <td class="gameth">Date</td>
+                <td class="gameth">Time taken</td>
+                <td class="gameth">Moves</td>
+                <td class="gameth">Players</td>
+                <td class="gameth">Scores</td>
+                <td class="gameth">Winner</td>
+            </tr>
+        </thead>
+        <tbody>
+            
+    {% if session.user_id %} 
+        {% for rows in rows %}
+            <tr>
+                <td class="gametr">{{ rows[0] }}</td>
+                <td class="gametr">{{ rows[1] }}</td>
+                <td class="gametr">{{ rows[2] }}</td>
+                <td class="gametr">{{ rows[3] }}</td>
+                <td class="gametr">{{ rows[4] }}</td>
+                <td class="gametr">{{ rows[5] }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>  
+    </table>
+    {% else %} 
+            <tr>
+                <td colspan="6" class="gamelogin">
+                    <h5>Log in to view your game history!</h5>
+                </td>
+        
+            </tr>
+        </tbody>
+
+    </table>
+    {% endif %} 
+    
+    
+</div>
+
+{% endblock %}

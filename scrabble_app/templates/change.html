@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Change Password
+{% endblock %}
+
+{% block main %}
+    <h2><br>CHANGE PASSWORD</h2>
+
+    <p>Password too weak. Just like you.</p><br>
+
+
+    <form action="/changepassword" method="post">
+        <div class="form-group">
+            <input class="changepage" name="oldpassword" placeholder="Current Password" type="password" minlength="8" required>
+        </div>
+        <div class="form-group">
+            <input class="changepage" name="password" placeholder="Change Password" type="password" minlength="8" required>
+        </div>
+        <div class="form-group">
+            <input class="changepage" name="confirmpassword" placeholder="Confirm new password" type="password" required>
+            <small id="password-requirement" class="form-text">8 characters minimum</small>
+        </div>
+        <button class="bttn" type="submit">Change password</button>
+    </form>
+
+    <div style="padding-top: 5rem;"></div>
+{% endblock %}

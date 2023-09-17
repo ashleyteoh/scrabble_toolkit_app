@@ -1,0 +1,430 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Score Keeper
+{% endblock %}
+
+{% block main %}
+
+    <!-- <body onload="CreateTable(); getTime();"></body> -->
+
+    <style>
+        table, th, td 
+        {
+            color: black;
+            border-collapse: collapse;
+            text-align: center;
+            margin: 0 auto;
+        }
+    </style>
+
+    <h2>SCRABBLE SCORE KEEPER</h2>
+
+    <p>Enjoy the Scrabble board game with your friends and family while this Scrabble Score Keeper does the math for you. <br>
+        Simply select the number of players and fill in the players’ names to begin.</p><br>
+    
+    <form>
+        <div class="form-group">
+        <label for="players">Number of players</label>
+        <select class="form-control" id="select" onchange="CreateTable()">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option selected value="4">4</option>
+        </select>
+        </div>
+    </form>
+
+
+    <div id="block">
+        <!-- table -->
+        <table id="table" class="table table-bordered"></table>
+        
+        <!-- add row button -->
+        <input class="bttn" type="submit" id="addrow" value="Add Row" onclick="addRow('table')">
+        
+        <!-- timer button -->
+        <button class="bttn" id="timer"><a target="_blank" href="https://www.google.com/search?q=5+minute+timer">5 Minute Timer</a></button>
+
+        <!-- end game button -->
+        {% if session.user_id %}
+            <input class="bttn" type="submit" id="endgame" value="End Game" onclick="endGame();showNormal()">
+        {% else %} 
+            <input class="bttn" type="submit" id="endgame" value="End Game" onclick="endGame();showDisabled()">
+        {% endif %}
+
+        <!-- announce winner -->
+        <p id="winner"></p>
+    
+
+        <!-- save game -->
+        <form action="/" method="post" id="submitGame">
+            
+            {% if session.user_id %}
+                <input class="bttn" type="submit" id="savegame" name="savegame" value="Save Game" onclick="saveGame()">
+                <input type="hidden" id="savetotal">
+                <input type="hidden" id="savenames">
+                
+                {% else %}
+                <input type="button" class="bttn" id="disabledsavegame" name="savegame" value="Save Game" data-toggle="tooltip" data-placement="left" title="Must be logged in to save game">
+                {% endif %}
+                
+            <input type="hidden" id="submitwinner">
+            <input type="hidden" id="submitwinnerstie">
+            <input type="hidden" id="submitmoves">
+            <input type="hidden" id="starttime">
+
+            <input class="bttn" type="button" id="newgame" value="New Game" onclick="CreateTable()">
+        </form>
+    </div>
+
+    <script>
+        // CREATE NEW TABLE BASED ON NUMBER OF PLAYERS
+        function CreateTable() {
+            // show addrow button, hide image, clear winner p
+            document.getElementById('addrow').style.display = 'inline';
+            document.getElementById('newgame').style.display = 'none';
+            document.getElementById("winner").innerHTML = "";
+            document.getElementById('submitwinner').value = "";
+            document.getElementById('submitwinnerstie').value = "";
+
+            if (document.getElementById('savegame')) {
+                document.getElementById('savegame').style.display = 'none';
+            }
+            else{
+                document.getElementById('disabledsavegame').style.display = 'none';
+            }
+            
+            // CLEAR PREVIOUS TABLE
+            document.getElementById('table').innerHTML = "";
+
+            //GET SELECTED PLAYER NUMBER
+            var sel = parseInt(document.getElementById('select').value); 
+    
+            // CREATE DYNAMIC TABLE.
+            var table = document.createElement('table');
+    
+            // SET THE TABLE ID. 
+            table.setAttribute('id', 'empTable');
+
+            
+            var body = document.body,
+            tbl  = document.createElement('table');
+            tbl.style.width  = '1000px';
+            
+            // CREATE FIRST ROW AND TOTAL ROW
+            for (var k = 0; k < 2; k++) {
+                var tr = tbl.insertRow();
+                
+                for(var i = 0; i < sel+1; i++) {
+                    var td = tr.insertCell();
+                    if (k == 0 && i == 0){
+                        td.appendChild(document.createTextNode('1'));
+                        td.setAttribute('id', 'row0cell0')
+                    }
+                    else if (k == 0) {
+                        var txtid = "row" + k + "cell" + i;
+                        td.innerHTML = "<input type='text' autocomplete='off' autocomplete='chrome-off' id='"+ txtid +"' class='td' onkeypress='return isNumberKey(event)' onchange='updateScore()'>";
+                    }
+                    else if (k == 1 && i == 0) {
+                        td.appendChild(document.createTextNode('TOTAL'));
+                        td.setAttribute('id', 'totalrow')
+                        td.setAttribute('class', 'totalcells')
+                    }
+                    else {
+                        // td.appendChild(document.createTextNode(''));
+                        td.setAttribute('id', 'totalcell' + i)
+                        td.setAttribute('class', 'totalcells')
+                    }
+                }
+            }
+
+            // CREATE TABLE HEAD
+            var header = tbl.createTHead();
+            var row = header.insertRow();
+            for(var i = 0; i < sel+1; i++) {
+                var cell = row.insertCell();
+                if (i == 0) {
+                    cell.innerHTML = "<b>Move</b>";
+                    cell.setAttribute('class', 'th')
+                }
+                else {
+                    var txtid = "player" + i
+                    // var val = "Player " + str(i)
+                    cell.innerHTML = "<input type='text' placeholder='Enter name' id="+txtid+" autocomplete='off' autocomplete='chrome-off' class='th'>";
+                }
+            }
+            
+            // ADD TABLE TO BODY
+            document.getElementById("table").appendChild(tbl);
+        }
+
+
+        // ADD ROW TO TABLE
+        function addRow() {
+            var empTab = document.getElementById('table').getElementsByTagName('tbody')[0]; // get table body
+            var sel = parseInt(document.getElementById('select').value); //get player number
+
+            var rowCnt = empTab.rows.length;   // table row count.
+
+            var tr = empTab.insertRow(rowCnt - 1); // insert the table row.
+            
+            for (var c = 0; c < (sel+1); c++) {    // loop cells
+                // var td = document.createElement('td'); // table definition.
+                var td = tr.insertCell(c);
+                
+                if (c == 0) {      // the first column.
+                    var newText = document.createTextNode(rowCnt);
+                    td.appendChild(newText);
+                    var move = 'row' + (rowCnt-1) + 'cell' + c
+                    td.setAttribute('id', move)
+                }
+                else {
+                    // 2nd, 3rd and 4th column, will have textbox.
+                    var txtid = 'row' + (rowCnt-1) + 'cell' + c
+                    td.innerHTML = "<input type='text' autocomplete='off' autocomplete='chrome-off' id='"+ txtid +"' class='td' onkeypress='return isNumberKey(event)' onchange='updateScore()'>";
+                }
+            }
+        }
+
+        // update total score row
+        function updateScore() {
+            // show endgame button
+            document.getElementById('endgame').style.display = 'inline';
+
+            var sel = parseInt(document.getElementById('select').value);    // get number of players
+            var empTab = document.getElementById('table').getElementsByTagName('tbody')[0];     //get table id
+            var rowCnt = empTab.rows.length;    // get row count
+            
+            var totals = [0, 0, 0, 0]     // empty array to add total scores
+            
+            // loop through all the rows except for final row
+            for (var i = 0; i < rowCnt-1; i++) {
+                // loop through all the cells starting from index 1
+                for (var j = 1; j < sel+1; j++) {
+                    var cellName = "row" + i + "cell" + j;                // get cell id name
+                    var cell = parseInt(document.getElementById(cellName).value);
+
+                    if (isNaN(cell) == true) {      // if cell is empty then skip
+                            continue
+                    }
+                    else {      // else update total count to array, index based on player number
+                        totals[j-1] += cell
+                    }
+                }
+            }
+            // add each total in the array to respective total column in html table
+            for (var k = 0; k < sel; k++) {
+                var totalCell = "totalcell" + (k+1);
+                document.getElementById(totalCell).innerHTML = totals[k];
+            }
+        }
+
+
+        // show disabled save game button if not logged in
+        function showDisabled() {
+            document.getElementById('disabledsavegame').style.display = 'inline';
+        }
+
+
+        // show normal game button if logged in
+        function showNormal() {
+            document.getElementById('savegame').style.display = 'inline';
+        }
+
+
+        // end the game, declare winner and score
+        function endGame() {    
+            // hide add row button
+            document.getElementById('addrow').style.display = 'none';
+            document.getElementById('endgame').style.display = 'none';
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('newgame').style.display = 'inline';
+
+            var empTab = document.getElementById('table').getElementsByTagName('tbody')[0];     //get table id
+            var rowCnt = empTab.rows.length;    // get row count
+            var sel = parseInt(document.getElementById('select').value);    // get number of players
+            var arr = []    // array to find highest number
+
+            // get total number of moves 
+            var moves = rowCnt - 1
+            document.getElementById("submitmoves").value = moves
+
+            // loop through the totals row to get highest score
+            for (var k = 0; k < sel; k++) {
+                // iterate through ids of total scores
+                var totalCell = "totalcell" + (k+1);
+                var cell = parseInt(document.getElementById(totalCell).innerHTML);  
+                arr.push(cell);     // add totals to array
+            }
+        
+            // find highest score and its index from the array
+            var highest = Math.max.apply(null, arr);
+            
+            // get number of people tied
+            var tie = 0
+            for (nums in arr) {
+                if (arr[nums] == highest) {
+                    tie += 1
+                }
+            }
+
+            // if theres a tie
+            if (tie > 1) {
+                var index1 = arr.indexOf(highest)
+                var index2 = arr.indexOf(highest, index1+1)
+
+                // get name of winners
+                var name1 = "player" + (index1+1)
+                var player1 = document.getElementById(name1).value
+                
+                var name2 = "player" +(index2+1)
+                var player2 = document.getElementById(name2).value
+
+                // if no name
+                if (player1 == "") {
+                    player1 = "Player " + (index1+1);
+                }
+
+                if (player2 == "") {
+                    player2 = "Player " + (index2+1);
+                }
+
+                document.getElementById("winner").innerHTML = "Tie! Between " + player1 + " and " + player2
+                document.getElementById("submitwinnerstie").value = player1 + ', ' + player2
+            }
+            // if only one winner
+            else {
+                var index = arr.indexOf(highest)
+                
+                // get name of winner
+                var name = "player" + (index+1)
+                var player = document.getElementById(name).value
+                
+                // output "Player x" if no name was inputted
+                if (player == "") {
+                    player = "Player " + (index+1); 
+                }
+    
+                // print winner and score
+                document.getElementById("winner").innerHTML = "Congrats! " +  player + " won with " + highest + " points!";
+                document.getElementById("submitwinner").value = player
+                
+            }
+
+
+        }
+
+        // save scores and player names
+        function saveGame() {
+            var sel = parseInt(document.getElementById('select').value);    // get number of players
+            var totals = []    // array to store totals
+            var names = []      // array to store names
+
+            for (var i = 0; i < sel; i++) {
+                // iterate through ids of total scores
+                var totalCell = "totalcell" + (i+1);
+                var cell = parseInt(document.getElementById(totalCell).innerHTML); 
+                
+                // iterate through player names
+                var name = "player" + (i+1)
+                var player = document.getElementById(name).value
+
+                // if no name entered = player1...
+                if (player == "") {
+                    player = "Player " + (i+1)
+                }
+
+                totals.push(cell);      // add totals to array
+                names.push(player);     // add player names to array
+            }
+            // console.log(totals)
+            // console.log(names)
+
+            // insert into hidden input to submit to flask
+            document.getElementById("savetotal").value = totals;
+            document.getElementById("savenames").value = names;
+
+        }
+    </script>
+
+    <script>
+    // ONLY ALLOWS NUMBERS IN TD INPUT
+    function isNumberKey(evt) {
+        var charCode = (evt.which) ? evt.which : event.keyCode;
+        if ((charCode < 48 || charCode > 57))
+        return false;
+        
+        return true;
+    }
+
+    // get start time of game
+    function getTime() {
+        var d = new Date();
+        var n = d.toLocaleTimeString();
+        document.getElementById("starttime").value = n;
+    }
+    </script>
+
+    <!-- AJAX -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.js"></script>
+
+    <!-- submit totals and names to save to database -->
+    <script type="text/javascript">
+        $(document).on('submit','#submitGame',function(e) 
+        {
+            console.log('hello');
+            console.log(document.getElementById("submitmoves").value)
+            e.preventDefault();
+            
+            var winner = document.getElementById("submitwinner").value
+            var tie = document.getElementById("submitwinnerstie").value
+            // document.getElementById("submitmoves").value = document.getElementById("").value
+
+            if (winner != "") {
+                $.ajax ({
+                    type:'POST',
+                    url:'/',
+                    data:{
+                        save_total:$("#savetotal").val(),
+                        save_names:$("#savenames").val(),
+                        start_time:$("#starttime").val(),
+                        moves:$("#submitmoves").val(),
+                        winner:$("#submitwinner").val()
+                    },
+                    success:function()
+                    {
+                        alert('Saved!');
+                    }
+                })
+            }
+
+            else if (tie != "") {
+                $.ajax ({
+                    type:'POST',
+                    url:'/',
+                    data:{
+                        save_total:$("#savetotal").val(),
+                        save_names:$("#savenames").val(),
+                        start_time:$("#starttime").val(),
+                        moves:$("#submitmoves").val(),
+                        tie:$("#submitwinnerstie").val()
+                    },
+                    success:function()
+                    {
+                        alert('Saved!');
+                    }
+                })
+            }
+        });
+    </script>
+
+    <script>
+        $(function(){
+            CreateTable();
+            getTime();
+        })
+    </script>
+
+    
+{% endblock %}
